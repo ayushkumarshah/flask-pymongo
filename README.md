@@ -8,3 +8,4 @@
 - [Using POST method](docs/flask/post.md)
 - [Sending JSON response](docs/flask/json.md)
 - [Database - Pymongo](docs/flask/database.md)
+- [Web forms and Flask Security](docs/flask/forms-security.md)
