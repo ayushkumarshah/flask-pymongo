@@ -52,7 +52,7 @@ def index():
 @app.route("/courses/<term>")
 def courses(term=None):
     if term is None:
-        term = 2019
+        term = 'Spring 2019'
     classes = Course.objects.order_by("-courseID")  # - for descending order
     return render_template(
         "courses.html", courseData=classes, courses=True, term=term
@@ -84,9 +84,10 @@ def login():
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
-        user_id = 20 + User.objects.count()
+        # user_id = User.objects.count()
+        user_id = 20
         user_id += 1
-
+        print(user_id)
         email = form.email.data
         password = form.password.data
         first_name = form.first_name.data
@@ -103,11 +104,23 @@ def register():
 
 @app.route("/enrollment", methods=["GET", "POST"])
 def enrollment():
-    id = request.form.get("courseID")
-    title = request.form.get("title")
-    term = request.form.get("term")
+    courseID = request.form.get("courseID")
+    courseTitle = request.form.get("title")
+    user_id = 1
+
+    if courseID:
+        if Enrollment.objects(user_id=user_id, courseID=courseID):
+            flash("Oops, you are already registered in this course {}".format(courseTitle), "danger")
+            return redirect(url_for("courses"))
+        else:
+            Enrollment(user_id=user_id, courseID=courseID).save()
+            flash("You are enrolled in {}".format(courseTitle), "success")
+
+    classes = None
+
+    term = request.form.get('term')
     return render_template(
-        "enrollment.html", register=True, data={"id": id, "term": term, "title": title},
+        "enrollment.html", enrollment=True, title="Enrollment", classes=classes
     )
 
 
