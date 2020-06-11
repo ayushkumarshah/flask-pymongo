@@ -6,6 +6,7 @@
 - [Form validation](forms/validation.md)
 - [Processing form data](forms/process_data.md)
 - [Updating routes to interact with database](forms/route.md)
+- [Data aggregation to create enrollment](forms/enrollment.md)
 
 
 
