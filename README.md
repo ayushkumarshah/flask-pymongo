@@ -9,3 +9,4 @@
 - [Sending JSON response](docs/flask/json.md)
 - [Database - Pymongo](docs/flask/database.md)
 - [Web forms and Flask Security](docs/flask/forms-security.md)
+- [Flask REST APIs](docs/flask/rest-api.md)
