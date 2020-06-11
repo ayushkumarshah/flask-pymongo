@@ -78,3 +78,68 @@ def enrollment():
         "enrollment.html", enrollment=True, title="Enrollment", classes=classes
     )
 ```
+
+## 3. Create aggregation using Compass UI
+
+3 stages:
+
+- $lookup: Performs a left outer join
+- $match: Filters documents
+- $unwind: Deconstructs an array field
+
+Select user collection, goto aggregation, then create stages:
+
+lookup (enrollment) > unwind > lookup (course) > unwind > match (user_id) > sort (courseID)
+
+## 4. UPdate classes using exported aggregation code for python from Compass UI
+
+```python
+classes = list(User.objects.aggregate(*[
+                                        {
+                                        '$lookup': {
+                                        'from': 'enrollment', 
+                                        'localField': 'user_id', 
+                                        'foreignField': 'user_id', 
+                                        'as': 'r1'
+                                        }
+                                        }, {
+                                        '$unwind': {
+                                        'path': '$r1', 
+                                        'includeArrayIndex': 'r1_id', 
+                                        'preserveNullAndEmptyArrays': False
+                                        }
+                                        }, {
+                                        '$lookup': {
+                                        'from': 'course', 
+                                        'localField': 'r1.courseID', 
+                                        'foreignField': 'courseID', 
+                                        'as': 'r2'
+                                        }
+                                        }, {
+                                        '$unwind': {
+                                        'path': '$r2', 
+                                        'preserveNullAndEmptyArrays': False
+                                        }
+                                        }, {
+                                        '$match': {
+                                        'user_id': user_id 
+                                        }
+                                        }, {
+                                        '$sort': {
+                                        'courseID': 1
+                                        }
+                                        }
+                                        ]))
+
+```
+
+## 5. UPdate enrollment template
+
+```html
+<td scope='row'>{{class.r2["courseID"]}}</td>
+<td>{{class.r2["title"]}}</td>
+<td>{{class.r2["description"]}}</td>
+<td>{{class.r2["credits"]}}</td>
+<td>{{class.r2["term"]}}</td>
+
+```
