@@ -1,5 +1,5 @@
 from app import app, db
-from flask import render_template, request, Response, json, redirect, flash, url_for
+from flask import render_template, request, Response, json, redirect, flash, url_for, session
 from app.models import User, Course, Enrollment
 from app.forms import LoginForm, RegisterForm
 
@@ -61,6 +61,9 @@ def courses(term=None):
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
+    if session.get('username'):
+        return redirect(url_for('index'))
+
     form = LoginForm()
     if form.validate_on_submit():
         # form data
@@ -73,19 +76,28 @@ def login():
         if user and user.get_password(password):
         # if request.form.get("email") == "test@uta.com":
             flash("{}, You are successfully logged in".format(user.first_name), "success")
+            session['user_id'] = user.user_id
+            session['username'] = user.first_name
             return redirect("/index")
         else:
             flash("Sorry, something went wrong", "danger")
 
     return render_template("login.html", title="Login", form=form, login=True)
 
+@app.route("/logout")
+def logout():
+    session['user_id'] = False
+    session.pop('username', None)
+    return redirect(url_for('index'))
+
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
+    if session.get('username'):
+        return redirect(url_for('index'))
     form = RegisterForm()
     if form.validate_on_submit():
-        # user_id = User.objects.count()
-        user_id = 20
+        user_id = User.objects.count()
         user_id += 1
         print(user_id)
         email = form.email.data
@@ -104,9 +116,13 @@ def register():
 
 @app.route("/enrollment", methods=["GET", "POST"])
 def enrollment():
+
+    # If not signed in, goto login page
+    if not session.get('username'):
+        return redirect(url_for('login'))
     courseID = request.form.get("courseID")
     courseTitle = request.form.get("title")
-    user_id = 1
+    user_id = session.get('user_id') 
 
     if courseID:
         if Enrollment.objects(user_id=user_id, courseID=courseID):
@@ -116,9 +132,43 @@ def enrollment():
             Enrollment(user_id=user_id, courseID=courseID).save()
             flash("You are enrolled in {}".format(courseTitle), "success")
 
-    classes = None
+    classes = list(User.objects.aggregate(*[
+                                            {
+                                                '$lookup': {
+                                                    'from': 'enrollment', 
+                                                    'localField': 'user_id', 
+                                                    'foreignField': 'user_id', 
+                                                    'as': 'r1'
+                                                }
+                                            }, {
+                                                '$unwind': {
+                                                    'path': '$r1', 
+                                                    'includeArrayIndex': 'r1_id', 
+                                                    'preserveNullAndEmptyArrays': False
+                                                }
+                                            }, {
+                                                '$lookup': {
+                                                    'from': 'course', 
+                                                    'localField': 'r1.courseID', 
+                                                    'foreignField': 'courseID', 
+                                                    'as': 'r2'
+                                                }
+                                            }, {
+                                                '$unwind': {
+                                                    'path': '$r2', 
+                                                    'preserveNullAndEmptyArrays': False
+                                                }
+                                            }, {
+                                                '$match': {
+                                                    'user_id': user_id 
+                                                }
+                                            }, {
+                                                '$sort': {
+                                                    'courseID': 1
+                                                }
+                                            }
+                                        ]))
 
-    term = request.form.get('term')
     return render_template(
         "enrollment.html", enrollment=True, title="Enrollment", classes=classes
     )
